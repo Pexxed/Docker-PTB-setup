@@ -1,0 +1,36 @@
+version: '3'
+
+services:
+  postgres_new:
+    image: postgres:latest
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 1234
+      POSTGRES_DB: students
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./small_dumpy.sql:/docker-entrypoint-initdb.d/small_dumpy.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 30s
+      retries: 3
+
+  sad_yalow:
+    image: graphile/postgraphile
+    environment:
+      DATABASE_URL: postgresql://readonly_user:1234@postgres_new:5432/students
+      PG_DEFAULT_ROLE: readonly
+      POSTGRAPHILE_JWT_SECRET: "xyz1234"
+      POSTGRAPHILE_JWT_ROLE: "role"
+    ports:
+      - "5000:5000"
+    depends_on:
+      - postgres_new
+    command: ["--retry-on-init-fail", "-s","veeva_vobjects,veeva_picklists"]
+
+
+volumes:
+  postgres_data:
